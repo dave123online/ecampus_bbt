@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+db.sqlite3
+staticfiles/
+media/notions/pdfs/*
+media/notions/audio/*
+!media/notions/pdfs/.gitkeep
+!media/notions/audio/.gitkeep
+venv/
+.venv/
+*.egg-info/
+.DS_Store

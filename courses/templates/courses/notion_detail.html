@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<div class="notion-page">
+  <div class="notion-breadcrumb">
+    <a href="{% url 'progress:dashboard' %}"><i class="fa-solid fa-arrow-left"></i> Retour à ma progression</a>
+    <span class="notion-level-badge">Niveau {{ notion.level }}</span>
+  </div>
+
+  <h1>{{ notion.title }}</h1>
+
+  <div class="notion-body">
+    {% for audio in notion.audios.all %}
+      {% if audio.position == "top" %}
+        <div class="audio-block">
+          <span class="audio-label"><i class="fa-solid fa-volume-high"></i> {{ audio.title|default:"Audio" }}</span>
+          <audio controls controlsList="nodownload" src="{% url 'courses:serve_audio' audio.pk %}"></audio>
+        </div>
+      {% endif %}
+    {% endfor %}
+
+    {% for pdf in notion.pdfs.all %}
+      <div class="pdf-block">
+        <span class="pdf-label"><i class="fa-solid fa-file-pdf"></i> {{ pdf.title|default:"Document" }}</span>
+        <div class="pdf-viewer" data-pdf-url="{% url 'courses:serve_pdf' pdf.pk %}"></div>
+      </div>
+    {% endfor %}
+
+    {% for audio in notion.audios.all %}
+      {% if audio.position == "middle" %}
+        <div class="audio-block">
+          <span class="audio-label"><i class="fa-solid fa-volume-high"></i> {{ audio.title|default:"Audio" }}</span>
+          <audio controls controlsList="nodownload" src="{% url 'courses:serve_audio' audio.pk %}"></audio>
+        </div>
+      {% endif %}
+    {% endfor %}
+
+    {% for audio in notion.audios.all %}
+      {% if audio.position == "bottom" %}
+        <div class="audio-block">
+          <span class="audio-label"><i class="fa-solid fa-volume-high"></i> {{ audio.title|default:"Audio" }}</span>
+          <audio controls controlsList="nodownload" src="{% url 'courses:serve_audio' audio.pk %}"></audio>
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+
+  {% if notion.quiz %}
+    <a href="{% url 'quizzes:quiz_take' notion.quiz.pk %}" class="btn notion-quiz-cta">
+      <i class="fa-solid fa-square-check"></i> Passer le quiz de validation
+    </a>
+  {% endif %}
+</div>
+
+<style>
+.notion-page{padding:30px 0 60px;max-width:800px;margin:0 auto;}
+.notion-breadcrumb{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+.notion-breadcrumb a{font-size:.9rem;color:var(--text-light);}
+.notion-level-badge{background:var(--primary-light);color:var(--primary);font-size:.78rem;font-weight:700;padding:4px 12px;border-radius:50px;text-transform:uppercase;}
+.notion-body{display:flex;flex-direction:column;gap:20px;margin:24px 0 36px;}
+.audio-block, .pdf-block{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:20px;}
+.audio-label, .pdf-label{display:block;font-family:'DM Sans',sans-serif;font-weight:700;font-size:.85rem;color:var(--primary);margin-bottom:10px;}
+.notion-quiz-cta{display:inline-flex;}
+</style>
+
+<script src="{% static 'js/pdf-viewer.js' %}"></script>
+<script src="{% static 'js/audio-player.js' %}"></script>
+{% endblock %}

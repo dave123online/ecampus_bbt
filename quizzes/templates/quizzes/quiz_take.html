@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="quiz-page">
+  <span class="lp-eyebrow">Quiz de validation</span>
+  <h1>{{ quiz.title|default:quiz.notion.title }}</h1>
+  <form method="post">
+    {% csrf_token %}
+    {% for question in quiz.questions.all %}
+      <div class="quiz-question-card">
+        <p class="quiz-question-text"><span class="quiz-q-num">{{ forloop.counter }}</span> {{ question.text }}</p>
+        <div class="quiz-choices">
+          {% for choice in question.choices.all %}
+            <label class="quiz-choice">
+              <input type="radio" name="question_{{ question.id }}" value="{{ choice.id }}">
+              <span>{{ choice.text }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+    {% endfor %}
+    <button type="submit"><i class="fa-solid fa-paper-plane"></i> Valider mes réponses</button>
+  </form>
+</div>
+
+<style>
+.quiz-page{max-width:700px;margin:30px auto 60px;}
+.quiz-question-card{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:22px;margin:20px 0;}
+.quiz-question-text{font-weight:700;font-family:'Poppins',sans-serif;display:flex;gap:12px;align-items:flex-start;margin-bottom:16px;}
+.quiz-q-num{background:var(--primary);color:var(--white);width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0;}
+.quiz-choices{display:flex;flex-direction:column;gap:10px;}
+.quiz-choice{display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all .2s ease;}
+.quiz-choice:hover{border-color:var(--primary);background:var(--primary-light);}
+</style>
+{% endblock %}

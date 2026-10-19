@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="quiz-result-page">
+  <div class="quiz-result-card {% if attempt.passed %}pass{% else %}fail{% endif %}">
+    <div class="quiz-result-icon">
+      {% if attempt.passed %}<i class="fa-solid fa-circle-check"></i>{% else %}<i class="fa-solid fa-rotate-left"></i>{% endif %}
+    </div>
+    <h1>{{ attempt.score }}%</h1>
+    {% if attempt.passed %}
+      <p>Notion validée — la suivante est débloquée 🎉</p>
+      <a href="{% url 'progress:dashboard' %}" class="btn">Retour à ma progression</a>
+    {% else %}
+      <p>Score insuffisant (seuil : 70%). Tu peux retenter autant de fois que nécessaire.</p>
+      <a href="{% url 'quizzes:quiz_take' quiz.pk %}" class="btn">Retenter le quiz</a>
+    {% endif %}
+  </div>
+</div>
+<style>
+.quiz-result-page{display:flex;justify-content:center;padding:60px 0;}
+.quiz-result-card{background:var(--white);border-radius:20px;padding:50px 40px;text-align:center;max-width:420px;box-shadow:var(--shadow-md);}
+.quiz-result-icon{font-size:3rem;margin-bottom:16px;}
+.quiz-result-card.pass .quiz-result-icon{color:#1a9c56;}
+.quiz-result-card.fail .quiz-result-icon{color:var(--gold);}
+.quiz-result-card h1{font-size:2.5rem;margin-bottom:10px;}
+.quiz-result-card p{color:var(--text-light);margin-bottom:26px;}
+</style>
+{% endblock %}

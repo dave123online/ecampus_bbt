@@ -1,0 +1,51 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Connexion — eCampus BBT</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Poppins:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="{% static 'css/main.css' %}">
+  <style>
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--dark) 0%, var(--primary) 100%);
+      padding: 24px;
+    }
+    .login-card {
+      background: var(--white);
+      border-radius: 20px;
+      padding: 48px 40px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: var(--shadow-lg);
+      text-align: center;
+    }
+    .login-logo { font-family: 'Poppins', sans-serif; font-weight: 800; font-size: 1.6rem; margin-bottom: 8px; }
+    .login-logo span { color: var(--primary); }
+    .login-card p.subtitle { color: var(--text-light); margin-bottom: 30px; font-size: .95rem; }
+    .login-card form { text-align: left; }
+    .login-card label { display: block; margin: 16px 0 6px; }
+    .login-card button { width: 100%; justify-content: center; margin-top: 24px; }
+    .login-errors { color: #cf2e2e; font-size: .9rem; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="login-logo">eCampus <span>BBT</span></div>
+    <p class="subtitle">Connectez-vous avec les identifiants transmis par BBT Solutions.</p>
+    <form method="post">
+      {% csrf_token %}
+      {{ form.as_p }}
+      {% if form.errors %}<p class="login-errors">Identifiants incorrects. Réessayez.</p>{% endif %}
+      <button type="submit"><i class="fa-solid fa-right-to-bracket"></i> Se connecter</button>
+    </form>
+  </div>
+</body>
+</html>

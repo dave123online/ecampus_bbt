@@ -1,0 +1,97 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eCampus BBT — Plateforme e-learning BBT Solutions</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Poppins:wght@600;700;800&family=DM+Sans:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="{% static 'css/main.css' %}">
+  <link rel="stylesheet" href="{% static 'css/landing.css' %}">
+</head>
+<body>
+
+  <header class="lp-header" id="lp-header">
+    <div class="lp-header-inner">
+      <a href="{% url 'home' %}" class="lp-logo">eCampus <span>BBT</span></a>
+      <a href="{% url 'accounts:login' %}" class="btn">
+        <i class="fa-solid fa-right-to-bracket"></i> Se connecter
+      </a>
+    </div>
+  </header>
+
+  <section class="lp-hero">
+    <div class="lp-hero-shape lp-hero-shape-1"></div>
+    <div class="lp-hero-shape lp-hero-shape-2"></div>
+    <div class="lp-hero-content">
+      <span class="lp-badge">✨ La formation BBT Solutions, maintenant en ligne</span>
+      <h1>Bienvenue sur <span class="lp-highlight">eCampus BBT</span></h1>
+      <p>La plateforme e-learning officielle de BBT Solutions : suivez vos notions d'anglais, écoutez vos audios, et validez chaque étape avec un quiz — à votre rythme, où que vous soyez.</p>
+      <div class="lp-hero-actions">
+        <a href="{% url 'accounts:login' %}" class="btn btn-white">
+          <i class="fa-solid fa-graduation-cap"></i> Accéder à mon espace
+        </a>
+        <a href="https://bbt-solution.com" class="btn btn-outline-white" target="_blank" rel="noopener">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i> Voir BBT Solutions
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="lp-features">
+    <div class="lp-container">
+      <div class="lp-section-header">
+        <span class="lp-eyebrow">Comment ça marche</span>
+        <h2>Un parcours pensé pour progresser vraiment</h2>
+      </div>
+      <div class="lp-feature-grid">
+        <div class="lp-feature-card">
+          <div class="lp-feature-icon"><i class="fa-solid fa-layer-group"></i></div>
+          <h3>Un niveau, un parcours</h3>
+          <p>Votre compte est créé par l'administration avec votre niveau (A1 à C2). Vous n'accédez qu'au contenu qui vous correspond.</p>
+        </div>
+        <div class="lp-feature-card">
+          <div class="lp-feature-icon"><i class="fa-solid fa-file-lines"></i></div>
+          <h3>Notions interactives</h3>
+          <p>Chaque notion combine documents à lire directement en ligne et audios intégrés, placés là où ils sont pédagogiquement utiles.</p>
+        </div>
+        <div class="lp-feature-card">
+          <div class="lp-feature-icon"><i class="fa-solid fa-square-check"></i></div>
+          <h3>Quiz de validation</h3>
+          <p>Un quiz auto-corrigé valide chaque notion avant de débloquer la suivante. Autant de tentatives que nécessaire.</p>
+        </div>
+        <div class="lp-feature-card">
+          <div class="lp-feature-icon"><i class="fa-solid fa-chart-line"></i></div>
+          <h3>Progression visible</h3>
+          <p>Un tableau de bord personnel affiche votre avancement notion par notion, en temps réel.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lp-cta">
+    <div class="lp-cta-shape-1"></div>
+    <div class="lp-cta-shape-2"></div>
+    <div class="lp-cta-content">
+      <h2>Vos identifiants vous ont été transmis par BBT Solutions ?</h2>
+      <p>Connectez-vous pour reprendre votre parcours là où vous vous étiez arrêté.</p>
+      <a href="{% url 'accounts:login' %}" class="btn btn-white">
+        <i class="fa-solid fa-right-to-bracket"></i> Se connecter
+      </a>
+    </div>
+  </section>
+
+  <footer class="lp-footer">
+    <p>eCampus BBT — propulsé par <a href="https://bbt-solution.com" target="_blank" rel="noopener">BBT Solutions</a>, Cotonou, Bénin.</p>
+  </footer>
+
+  <script>
+    window.addEventListener('scroll', () => {
+      document.getElementById('lp-header').classList.toggle('scrolled', window.scrollY > 30);
+    });
+  </script>
+</body>
+</html>
