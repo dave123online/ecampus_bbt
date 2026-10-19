@@ -17,9 +17,14 @@
   <header class="lp-header" id="lp-header">
     <div class="lp-header-inner">
       <a href="{% url 'home' %}" class="lp-logo">eCampus <span>BBT</span></a>
-      <a href="{% url 'accounts:login' %}" class="btn">
-        <i class="fa-solid fa-right-to-bracket"></i> Se connecter
-      </a>
+      <div class="lp-header-actions">
+        <a href="{% url 'accounts:register' %}" class="btn btn-outline-white">
+          <i class="fa-solid fa-user-plus"></i> S'inscrire
+        </a>
+        <a href="{% url 'accounts:login' %}" class="btn">
+          <i class="fa-solid fa-right-to-bracket"></i> Se connecter
+        </a>
+      </div>
     </div>
   </header>
 
@@ -31,11 +36,11 @@
       <h1>Bienvenue sur <span class="lp-highlight">eCampus BBT</span></h1>
       <p>La plateforme e-learning officielle de BBT Solutions : suivez vos notions d'anglais, écoutez vos audios, et validez chaque étape avec un quiz — à votre rythme, où que vous soyez.</p>
       <div class="lp-hero-actions">
-        <a href="{% url 'accounts:login' %}" class="btn btn-white">
-          <i class="fa-solid fa-graduation-cap"></i> Accéder à mon espace
+        <a href="{% url 'accounts:register' %}" class="btn btn-white">
+          <i class="fa-solid fa-rocket"></i> S'inscrire et commencer
         </a>
-        <a href="https://bbt-solution.com" class="btn btn-outline-white" target="_blank" rel="noopener">
-          <i class="fa-solid fa-arrow-up-right-from-square"></i> Voir BBT Solutions
+        <a href="{% url 'accounts:login' %}" class="btn btn-outline-white">
+          <i class="fa-solid fa-graduation-cap"></i> Accéder à mon espace
         </a>
       </div>
     </div>
@@ -76,11 +81,16 @@
     <div class="lp-cta-shape-1"></div>
     <div class="lp-cta-shape-2"></div>
     <div class="lp-cta-content">
-      <h2>Vos identifiants vous ont été transmis par BBT Solutions ?</h2>
-      <p>Connectez-vous pour reprendre votre parcours là où vous vous étiez arrêté.</p>
-      <a href="{% url 'accounts:login' %}" class="btn btn-white">
-        <i class="fa-solid fa-right-to-bracket"></i> Se connecter
-      </a>
+      <h2>Prêt à progresser en anglais ?</h2>
+      <p>Inscrivez-vous en quelques minutes et payez votre accès comme vous le souhaitez — Mobile Money (KkiaPay) ou carte internationale (Flutterwave), en une fois ou en 3 tranches.</p>
+      <div class="lp-hero-actions">
+        <a href="{% url 'accounts:register' %}" class="btn btn-white">
+          <i class="fa-solid fa-user-plus"></i> Créer mon compte
+        </a>
+        <a href="{% url 'accounts:login' %}" class="btn btn-outline-white">
+          <i class="fa-solid fa-right-to-bracket"></i> J'ai déjà mes identifiants
+        </a>
+      </div>
     </div>
   </section>
 
