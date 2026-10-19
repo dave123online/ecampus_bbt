@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     "courses",
     "quizzes",
     "progress",
+    "payments",
 ]
 
 MIDDLEWARE = [
@@ -102,3 +103,29 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Fixed platform-wide quiz pass threshold (see quizzes/models.py)
 QUIZ_PASS_THRESHOLD = 70
+
+# ---------------------------------------------------------------------------
+# Self-service registration / payments
+# ---------------------------------------------------------------------------
+PAYMENT_SECRET_KEY = os.environ.get("PAYMENT_SECRET_KEY", SECRET_KEY)
+
+FLUTTERWAVE_SECRET_KEY = os.environ.get("FLUTTERWAVE_SECRET_KEY", "")
+FLUTTERWAVE_PUBLIC_KEY = os.environ.get("FLUTTERWAVE_PUBLIC_KEY", "")
+FLUTTERWAVE_BASE_URL = os.environ.get("FLUTTERWAVE_BASE_URL", "https://api.flutterwave.com/v3")
+# Hash statique configuré dans le dashboard FLW pour signer les webhooks.
+FLUTTERWAVE_SECRET_HASH = os.environ.get("FLUTTERWAVE_SECRET_HASH", "")
+
+KKIAPAY_SECRET_KEY = os.environ.get("KKIAPAY_SECRET_KEY", "")
+KKIAPAY_PUBLIC_KEY = os.environ.get("KKIAPAY_PUBLIC_KEY", "")
+KKIAPAY_BASE_URL = os.environ.get("KKIAPAY_BASE_URL", "https://api.kkiapay.me/api")
+
+# Absolu (sans /), utilisé côté serveur pour construire les URL de callback/webhook.
+PLATFORM_BASE_URL = os.environ.get("PLATFORM_BASE_URL", "http://127.0.0.1:8000")
+
+# Part du prix à payer avant le premier déverrouillage de notions (tranche 1).
+FIRST_TRANCHE_RATIO = 0.34
+
+# Au-delà de ce nombre de jours sans aucune activité, une inscription
+# auto-created jamais payée est annulée automatiquement
+# (manage.py payments_housekeeping — à planifier en cron).
+ENROLLMENT_ABANDON_AFTER_DAYS = int(os.environ.get("ENROLLMENT_ABANDON_AFTER_DAYS", "7"))

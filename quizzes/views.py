@@ -1,6 +1,8 @@
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, render, redirect
 
+from courses.permissions import notion_access_allowed
 from progress.services import register_attempt
 
 from .models import Quiz, QuizAttempt, QuizAnswer, Choice
@@ -8,7 +10,12 @@ from .models import Quiz, QuizAttempt, QuizAnswer, Choice
 
 @login_required
 def quiz_take(request, pk):
-    quiz = get_object_or_404(Quiz, pk=pk)
+    quiz = get_object_or_404(Quiz.objects.select_related("notion"), pk=pk)
+
+    # Same gate as the notion page itself: level match + paid quota +
+    # sequential unlock. Prevents hitting quiz URLs directly to bypass it.
+    if not notion_access_allowed(request.user, quiz.notion):
+        raise PermissionDenied("Ce quiz n'est pas accessible pour vous.")
 
     if request.method == "POST":
         questions = quiz.questions.all()

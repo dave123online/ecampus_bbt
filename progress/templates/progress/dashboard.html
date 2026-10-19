@@ -11,6 +11,31 @@
   </div>
 </div>
 
+{% if payment %}
+<div class="pay-schedule {% if payment.enrollment.status == 'paid' %}pay-schedule-done{% endif %}">
+  <div class="pay-schedule-head">
+    <strong><i class="fa-solid fa-receipt"></i> Formule : {{ payment.enrollment.plan.name }}</strong>
+    <span class="pay-schedule-status">
+      {% if payment.enrollment.status == "paid" %}✅ Accès entièrement payé
+      {% elif payment.enrollment.status == "partially_paid" %}⏳ Partiellement payé
+      {% else %}🔒 En attente de paiement{% endif %}
+    </span>
+  </div>
+  <ul class="pay-schedule-lines">
+    <li>Payé : <strong>{{ payment.enrollment.total_paid }}</strong> / {{ payment.enrollment.plan.price }} {{ payment.enrollment.plan.currency }}</li>
+    <li>Notions débloquées par le paiement : <strong>{{ payment.paid_notions }}</strong> / {{ payment.enrollment.plan.notion_count }}</li>
+    {% if payment.tranche_index %}
+    <li>Prochaine tranche ({{ payment.tranche_index }}/{{ payment.tranches_total }}) : <strong>{{ payment.amount }} {{ payment.enrollment.plan.currency }}</strong></li>
+    {% endif %}
+  </ul>
+  {% if payment.tranche_index %}
+  <a class="btn btn-primary" href="{% url 'payments:checkout' enrollment_id=payment.enrollment.pk %}">
+    Payer la tranche suivante <i class="fa-solid fa-arrow-right"></i>
+  </a>
+  {% endif %}
+</div>
+{% endif %}
+
 <div class="notion-grid">
   {% for row in rows %}
   <div class="notion-card status-{{ row.status }}">
@@ -54,5 +79,10 @@
 .notion-status-badge{display:inline-block;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-light);margin-bottom:10px;}
 .notion-score{font-size:.9rem;color:var(--text-light);margin-bottom:14px;}
 .notion-btn{width:100%;justify-content:center;padding:10px;}
+.pay-schedule{background:var(--white);border:1px solid var(--primary);border-radius:18px;padding:22px 26px;margin-bottom:28px;box-shadow:var(--shadow-sm);}
+.pay-schedule-done{border-color:#1a9c56;}
+.pay-schedule-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;}
+.pay-schedule-status{font-weight:700;font-size:.9rem;}
+.pay-schedule-lines{list-style:none;padding:0;margin:0 0 14px;color:var(--text-light);font-size:.92rem;display:flex;flex-direction:column;gap:4px;}
 </style>
 {% endblock %}

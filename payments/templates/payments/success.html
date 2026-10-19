@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Paiement — eCampus BBT{% endblock %}
+{% block content %}
+<div class="auth-card">
+  {% if enrollment.status == "paid" %}
+    <h1>🎉 Paiement confirmé !</h1>
+    <p>Votre accès complet est actif : {{ enrollment.plan.notion_count }} notions vous attendent.</p>
+    <a class="btn btn-primary" href="{% url 'progress:dashboard' %}">Commencer mes leçons</a>
+  {% elif enrollment.total_paid > 0 %}
+    <h1>Merci !</h1>
+    <p>Tranche enregistrée. Notions débloquées pour l'instant : <strong>{{ enrollment.paid_notion_count }}/{{ enrollment.plan.notion_count }}</strong>.</p>
+    {% if enrollment.remaining > 0 %}
+    <a class="btn btn-primary" href="{% url 'payments:checkout' enrollment.pk %}">Payer la tranche suivante ({{ enrollment.remaining }} {{ enrollment.plan.currency }})</a>
+    {% endif %}
+    <a class="btn btn-secondary" href="{% url 'progress:dashboard' %}">Aller à mon espace</a>
+  {% else %}
+    <h1 id="pending-title">Paiement en cours de confirmation…</h1>
+    <p id="pending-text">Si votre transaction est validée côté opérateur, votre accès s'ouvrira automatiquement. Cette page se met à jour toute seule.</p>
+    <a class="btn btn-secondary" href="{% url 'payments:checkout' enrollment.pk %}">Vérifier l'état</a>
+    {% if latest_payment and latest_payment.status == "initiated" %}
+    <script>
+      // Server-side polling: our API re-verifies the tranche with the provider.
+      // No manual intervention needed — when confirmed, we reload to the success view.
+      (function poll(){
+        const checkUrl = "{% url 'payments:check_status' latest_payment.pk %}";
+        fetch(checkUrl, {credentials:"same-origin"})
+          .then(r => r.json())
+          .then(d => { if (d.status === "success") { location.reload(); return; } })
+          .catch(()=>{});
+        setTimeout(poll, 5000);
+      })();
+    </script>
+    {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

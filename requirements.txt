@@ -2,3 +2,6 @@ Django>=5.0,<6.0
 python-dotenv>=1.0
 # Only required if DJANGO_USE_POSTGRES=1 (production)
 psycopg2-binary>=2.9
+
+# HTTP calls to payment providers (Flutterwave / KkiaPay APIs)
+requests>=2.31

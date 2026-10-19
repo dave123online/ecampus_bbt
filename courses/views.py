@@ -3,7 +3,7 @@ from django.http import FileResponse, Http404
 from django.views.generic import DetailView
 
 from .models import Notion, PDFResource, AudioResource
-from .permissions import NotionAccessMixin
+from .permissions import NotionAccessMixin, notion_access_allowed
 
 
 class NotionDetailView(NotionAccessMixin, DetailView):
@@ -23,8 +23,7 @@ def serve_pdf(request, pk):
     resource = PDFResource.objects.filter(pk=pk).select_related("notion").first()
     if resource is None:
         raise Http404
-    user = request.user
-    if not user.is_student() or user.level != resource.notion.level:
+    if not notion_access_allowed(request.user, resource.notion):
         raise Http404
     return FileResponse(resource.file.open("rb"), content_type="application/pdf")
 
@@ -34,7 +33,6 @@ def serve_audio(request, pk):
     resource = AudioResource.objects.filter(pk=pk).select_related("notion").first()
     if resource is None:
         raise Http404
-    user = request.user
-    if not user.is_student() or user.level != resource.notion.level:
+    if not notion_access_allowed(request.user, resource.notion):
         raise Http404
     return FileResponse(resource.file.open("rb"), content_type="audio/mpeg")

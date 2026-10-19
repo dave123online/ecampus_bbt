@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Paiement — eCampus BBT{% endblock %}
+{% block content %}
+<div class="auth-card">
+  <h1>Paiement — {{ enrollment.plan.name }}</h1>
+
+  {% if already_paid %}
+    <p class="success">✅ Votre accès est entièrement payé. <a href="{% url 'progress:dashboard' %}">Accéder à mes notions</a>.</p>
+  {% else %}
+    <ul class="muted">
+      <li>Formule : {{ enrollment.plan.notion_count }} notion(s) du niveau {{ enrollment.student.level }}</li>
+      <li>Prix total : {{ enrollment.plan.price }} {{ enrollment.plan.currency }}</li>
+      <li>Déjà payé : {{ enrollment.total_paid }} {{ enrollment.plan.currency }}</li>
+      {% if tranche_index %}
+      <li>Tranche {{ tranche_index }}/{{ tranches_total }} à régler : <strong>{{ amount }} {{ enrollment.plan.currency }}</strong></li>
+      {% endif %}
+    </ul>
+
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+    {% if tranche_index %}
+    <form method="post">
+      {% csrf_token %}
+      <div class="payment-methods">
+        <button type="submit" name="provider" value="kkiapay" class="btn btn-primary">
+          📱 Payer avec Mobile Money (KkiaPay)
+        </button>
+        <button type="submit" name="provider" value="flutterwave" class="btn btn-secondary">
+          💳 Payer par carte (Flutterwave)
+        </button>
+      </div>
+    </form>
+    {% else %}
+    <p class="warning">Toutes vos tranches ont été engagées. Contactez-nous si le solde affiché semble incorrect.</p>
+    {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

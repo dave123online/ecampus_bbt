@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Redirection vers KkiaPay…</title></head>
+<body onload="document.forms[0].submit()">
+  <p>Redirection sécurisée vers KkiaPay…</p>
+  <form action="{{ post_url }}" method="post">
+    {% for name, value in fields.items %}
+      <input type="hidden" name="{{ name }}" value="{{ value }}">
+    {% endfor %}
+  </form>
+</body>
+</html>
