@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Inscription — eCampus BBT{% endblock %}
+{% block content %}
+<div class="auth-card">
+  <h1>Créer mon compte</h1>
+  <p class="muted">Choisissez votre formule, payez en Mobile Money ou par carte, et commencez immédiatement.</p>
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    {% for field in form %}
+      <div class="form-field">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}<small class="muted">{{ field.help_text }}</small>{% endif %}
+        {{ field.errors }}
+      </div>
+    {% endfor %}
+    <button type="submit" class="btn btn-primary">Continuer vers le paiement</button>
+  </form>
+
+  <p class="muted">Déjà inscrit ? <a href="{% url 'accounts:login' %}">Connectez-vous</a></p>
+</div>
+{% endblock %}

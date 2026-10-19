@@ -1,13 +1,12 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .forms import CustomUserCreationForm
+from .forms import SelfRegistrationForm  # noqa: F401 — kept for reference
 from .models import CustomUser
 
 
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
-    add_form = CustomUserCreationForm
     model = CustomUser
     list_display = ("username", "email", "role", "level", "is_active")
     list_filter = ("role", "level")

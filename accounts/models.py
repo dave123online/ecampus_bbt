@@ -6,9 +6,11 @@ from courses.models import LEVEL_CHOICES
 
 class CustomUser(AbstractUser):
     """
-    Extends the default Django user. Students are always created by an
-    admin (see accounts/admin.py and accounts/forms.py) and assigned a
-    level at creation time — they never self-register.
+    Extends the default Django user. Two ways in:
+    - Classroom students: created by the manager (admin), given credentials.
+    - Walk-in students: self-register via accounts.SelfRegistrationForm and
+      pay for access (payments app); their account stays inactive until the
+      first verified payment.
     """
     ROLE_CHOICES = [
         ("admin", "Administrateur"),
@@ -22,6 +24,10 @@ class CustomUser(AbstractUser):
         null=True,
         blank=True,
         help_text="Niveau attribué par l'admin. Obligatoire si role=student.",
+    )
+    phone_number = models.CharField(
+        max_length=20, blank=True,
+        help_text="Numéro Mobile Money (auto-inscrits, pour KkiaPay).",
     )
 
     def is_student(self):
