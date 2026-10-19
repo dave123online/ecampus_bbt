@@ -125,6 +125,25 @@ class WebhookSecurityTests(TestCase):
         self.client.session["pending_enrollment_id"] = self.enrollment.pk
         self.client.session.save()
 
+    @patch("payments.providers.kkiapay_initiate_payment",
+           return_value=("https://app.kkiapay.me/api/tpayment", {"apikey": "k"}))
+    def test_checkout_amount_not_taken_from_post(self, minit):
+        """POSTing a fake amount must not change what we bill.
+
+        Use an authenticated student: the one-shot signup session marker is
+        consumed by the first checkout POST, so a Client-based second POST
+        would be rejected for ownership reasons, not billing ones.
+        """
+        self.student.is_active = True
+        self.student.save(update_fields=["is_active"])
+        self.client.login(username=self.student.username, password="pass12345")
+        resp = self.client.post(
+            reverse("payments:checkout", args=[self.enrollment.pk]),
+            {"provider": "kkiapay", "amount": "1"})
+        self.assertEqual(resp.status_code, 200)  # kkiapay redirect form page
+        p = Payment.objects.filter(enrollment=self.enrollment).first()
+        self.assertNotEqual(p.amount, Decimal("1"))
+
     def test_flutterwave_webhook_rejects_missing_hash(self):
         resp = self.client.post(reverse("payments:flutterwave_webhook"),
                                 data={"data": {"event": "charge.completed"}},
@@ -177,18 +196,6 @@ class WebhookSecurityTests(TestCase):
         self.assertEqual(self.payment.status, "success")
         self.student.refresh_from_db()
         self.assertTrue(self.student.is_active)
-
-    @patch("payments.providers.kkiapay_initiate_payment",
-           return_value=("https://app.kkiapay.me/api/tpayment", {"apikey": "k"}))
-    def test_checkout_amount_not_taken_from_post(self, minit):
-        """POSTing a fake amount must not change what we bill."""
-        self._follow_session()
-        resp = self.client.post(
-            reverse("payments:checkout", args=[self.enrollment.pk]),
-            {"provider": "kkiapay", "amount": "1"})
-        self.assertEqual(resp.status_code, 200)  # kkiapay redirect form page
-        p = Payment.objects.filter(enrollment=self.enrollment).first()
-        self.assertNotEqual(p.amount, Decimal("1"))
 
 
 class AccessGateTests(TestCase):

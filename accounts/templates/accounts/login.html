@@ -46,6 +46,10 @@
       {% if form.errors %}<p class="login-errors">Identifiants incorrects. Réessayez.</p>{% endif %}
       <button type="submit"><i class="fa-solid fa-right-to-bracket"></i> Se connecter</button>
     </form>
+    <p style="margin-top: 24px; font-size: .9rem;">
+      Pas encore de compte ?
+      <a href="{% url 'accounts:register' %}"><strong>S'inscrire</strong></a>
+    </p>
   </div>
 </body>
 </html>

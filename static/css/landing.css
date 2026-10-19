@@ -21,6 +21,12 @@
   justify-content: space-between;
   align-items: center;
 }
+.lp-header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
 .lp-logo {
   font-family: 'Poppins', sans-serif;
   font-weight: 800;
