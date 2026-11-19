@@ -1,7 +1,11 @@
 Django>=5.0,<6.0
 python-dotenv>=1.0
-# Only required if DJANGO_USE_POSTGRES=1 (production)
+dj-database-url>=2.1
 psycopg2-binary>=2.9
+
+# Production (Render)
+gunicorn>=22.0
+whitenoise>=6.6
 
 # HTTP calls to payment providers (Flutterwave / KkiaPay APIs)
 requests>=2.31

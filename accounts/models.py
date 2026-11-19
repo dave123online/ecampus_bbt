@@ -1,7 +1,15 @@
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models
 
 from courses.models import LEVEL_CHOICES
+
+
+class CustomUserManager(UserManager):
+    def create_superuser(self, username, email=None, password=None, **extra_fields):
+        # Sans ça, `createsuperuser` crée un role="student" (redirigé vers le
+        # dashboard élève par home_redirect).
+        extra_fields.setdefault("role", "admin")
+        return super().create_superuser(username, email, password, **extra_fields)
 
 
 class CustomUser(AbstractUser):
@@ -16,6 +24,8 @@ class CustomUser(AbstractUser):
         ("admin", "Administrateur"),
         ("student", "Étudiant"),
     ]
+
+    objects = CustomUserManager()
 
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default="student")
     level = models.CharField(

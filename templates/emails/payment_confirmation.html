@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><title>Paiement confirmé</title></head>
+<body style="font-family: Arial, sans-serif; background: #f5f5f5; padding: 40px 20px;">
+    <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 40px;">
+        <h2 style="color: #2235DD; margin-bottom: 8px;">eCampus BBT</h2>
+        <h1 style="font-size: 1.4rem; color: #05060F;">Paiement confirmé ✅</h1>
+        <p style="color: #4a5568; line-height: 1.6;">
+            Bonjour {{ student.first_name|default:student.username }},
+        </p>
+        <p style="color: #4a5568; line-height: 1.6;">
+            Votre paiement a bien été enregistré. Voici le récapitulatif :
+        </p>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+            <tr>
+                <td style="padding: 10px; border-bottom: 1px solid #eee; color: #666;">Formule</td>
+                <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">{{ enrollment.plan.name }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 10px; border-bottom: 1px solid #eee; color: #666;">Montant payé</td>
+                <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">{{ payment.amount }} {{ payment.currency }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 10px; border-bottom: 1px solid #eee; color: #666;">Notions débloquées</td>
+                <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">
+                    {{ enrollment.paid_notion_count }} / {{ enrollment.plan.notion_count }}
+                </td>
+            </tr>
+            <tr>
+                <td style="padding: 10px; color: #666;">Statut</td>
+                <td style="padding: 10px; font-weight: bold; color: #1a9c56;">
+                    {% if enrollment.status == "paid" %}Entièrement payé
+                    {% else %}Partiellement payé
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+        <p style="color: #4a5568; line-height: 1.6;">
+            Vous pouvez accéder à vos leçons dès maintenant.
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{{ PLATFORM_BASE_URL }}/progress/"
+               style="display: inline-block; background: #2235DD; color: #fff;
+                      padding: 14px 32px; border-radius: 50px; text-decoration: none;
+                      font-weight: bold;">
+                Accéder à mes leçons
+            </a>
+        </div>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;">
+        <p style="color: #999; font-size: 0.8rem;">
+            eCampus BBT — BBT Solutions, Cotonou, Bénin
+        </p>
+    </div>
+</body>
+</html>

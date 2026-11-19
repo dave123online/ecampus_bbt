@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><title>Finalisez votre inscription</title></head>
+<body style="font-family: Arial, sans-serif; background: #f5f5f5; padding: 40px 20px;">
+    <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 40px;">
+        <h2 style="color: #2235DD; margin-bottom: 8px;">eCampus BBT</h2>
+        <h1 style="font-size: 1.4rem; color: #05060F;">Finalisez votre inscription</h1>
+        <p style="color: #4a5568; line-height: 1.6;">
+            Bonjour {{ student.first_name|default:student.username }},
+        </p>
+        <p style="color: #4a5568; line-height: 1.6;">
+            Vous avez commencé une inscription à la formule
+            <strong>{{ plan.name }}</strong> mais n'avez pas finalisé votre paiement.
+        </p>
+        <p style="color: #4a5568; line-height: 1.6;">
+            Cliquez sur le bouton ci-dessous pour reprendre votre paiement là où vous l'avez laissé :
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{{ recovery_url }}"
+               style="display: inline-block; background: #2235DD; color: #fff;
+                      padding: 14px 32px; border-radius: 50px; text-decoration: none;
+                      font-weight: bold;">
+                Reprendre mon paiement
+            </a>
+        </div>
+        <p style="color: #999; font-size: 0.85rem;">
+            Ce lien est valable 24 heures. Si vous n'êtes pas à l'origine de cette
+            demande, ignorez cet e-mail.
+        </p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;">
+        <p style="color: #999; font-size: 0.8rem;">
+            eCampus BBT — BBT Solutions, Cotonou, Bénin
+        </p>
+    </div>
+</body>
+</html>

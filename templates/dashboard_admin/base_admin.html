@@ -1,0 +1,71 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Administration — eCampus BBT</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="{% static 'css/main.css' %}">
+  <link rel="stylesheet" href="{% static 'dashboard_admin/css/admin.css' %}">
+</head>
+<body>
+<div class="admin-layout">
+  <aside class="admin-sidebar">
+    <div class="admin-logo">
+      eCampus <span>Admin</span>
+    </div>
+    <nav class="admin-nav">
+      <a href="{% url 'dashboard_admin:index' %}" class="{% if request.resolver_match.url_name == 'index' %}active{% endif %}">
+        <i class="fa-solid fa-chart-line"></i> Tableau de bord
+      </a>
+      <a href="{% url 'dashboard_admin:students' %}" class="{% if 'student' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="fa-solid fa-users"></i> Étudiants
+      </a>
+      <a href="{% url 'dashboard_admin:student_create' %}" class="{% if request.resolver_match.url_name == 'student_create' %}active{% endif %}">
+        <i class="fa-solid fa-user-plus"></i> Ajouter un étudiant
+      </a>
+      <a href="{% url 'dashboard_admin:payments' %}" class="{% if request.resolver_match.url_name == 'payments' %}active{% endif %}">
+        <i class="fa-solid fa-receipt"></i> Paiements
+      </a>
+      <a href="{% url 'dashboard_admin:quiz_attempts' %}" class="{% if request.resolver_match.url_name == 'quiz_attempts' %}active{% endif %}">
+        <i class="fa-solid fa-square-check"></i> Tentatives de quiz
+      </a>
+
+      <div class="admin-nav-divider"></div>
+
+      <a href="{% url 'admin:index' %}" target="_blank">
+        <i class="fa-solid fa-gear"></i> Administration avancée
+      </a>
+      <a href="{% url 'accounts:logout' %}">
+        <i class="fa-solid fa-right-from-bracket"></i> Déconnexion
+      </a>
+    </nav>
+    <div class="admin-user">
+      <i class="fa-solid fa-user-shield"></i>
+      <div>
+        <strong>{{ request.user.first_name|default:request.user.username }}</strong>
+        <small>{{ request.user.email }}</small>
+      </div>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    {% if messages %}
+      <div class="admin-messages">
+        {% for message in messages %}
+          <div class="admin-message admin-message-{{ message.tags }}">
+            <i class="fa-solid fa-circle-info"></i> {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,124 @@
+# Blueprint Render — eCampus BBT
+# Dashboard Render → New → Blueprint → choisir le dépôt.
+# Les valeurs `sync: false` sont demandées une fois dans le dashboard.
+databases:
+  - name: ecampus-db
+    plan: basic-256mb        # PAS "free" : le Postgres Free expire après 30 jours
+    region: frankfurt
+    databaseName: ecampus
+    user: ecampus
+
+services:
+  # ------------------------------------------------------------------ web
+  - type: web
+    name: ecampus-bbt
+    runtime: python
+    region: frankfurt
+    plan: starter            # PAS "free" : veille 15 min (webhooks de paiement perdus),
+                             # FS éphémère, SMTP bloqué, pas de disque persistant
+    buildCommand: ./build.sh
+    preDeployCommand: python manage.py migrate --no-input
+    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    healthCheckPath: /healthz/
+    disk:                    # PDF + audios uploadés depuis /admin/
+      name: ecampus-media
+      mountPath: /var/data
+      sizeGB: 5
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: DJANGO_DEBUG
+        value: "0"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ecampus-db
+          property: connectionString
+      - key: MEDIA_ROOT
+        value: /var/data/media
+      # Domaine perso (une fois branché) : DJANGO_ALLOWED_HOSTS + PLATFORM_BASE_URL
+      # + CSRF_TRUSTED_ORIGINS. Sans ça, le hostname *.onrender.com est utilisé.
+      - key: PLATFORM_BASE_URL
+        sync: false
+      - key: DJANGO_ALLOWED_HOSTS
+        sync: false
+      # --- Paiements ---
+      - key: KKIAPAY_PUBLIC_KEY
+        sync: false
+      - key: KKIAPAY_PRIVATE_KEY
+        sync: false
+      - key: KKIAPAY_SECRET_KEY
+        sync: false
+      - key: KKIAPAY_WEBHOOK_SECRET
+        sync: false
+      - key: KKIAPAY_SANDBOX
+        value: "1"           # passer à "0" une fois les tests sandbox validés
+      - key: FLUTTERWAVE_PUBLIC_KEY
+        sync: false
+      - key: FLUTTERWAVE_SECRET_KEY
+        sync: false
+      - key: FLUTTERWAVE_SECRET_HASH
+        sync: false
+      # --- E-mail (SMTP OK sur instance payante ; ex. Brevo smtp-relay.brevo.com:587) ---
+      - key: EMAIL_BACKEND
+        value: django.core.mail.backends.smtp.EmailBackend
+      - key: EMAIL_HOST
+        sync: false
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+      - key: DEFAULT_FROM_EMAIL
+        sync: false
+
+  # ----------------------------------------------- filet de sécurité paiements
+  # Re-vérifie les tranches bloquées en "initiated" et nettoie les inscriptions
+  # abandonnées. Sans lui, un webhook perdu = un élève qui a payé sans accès.
+  - type: cron
+    name: ecampus-housekeeping
+    runtime: python
+    region: frankfurt
+    plan: starter
+    schedule: "*/15 * * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python manage.py payments_housekeeping
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: DJANGO_DEBUG
+        value: "0"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ecampus-db
+          property: connectionString
+      - key: DJANGO_SECRET_KEY
+        fromService:
+          type: web
+          name: ecampus-bbt
+          envVarKey: DJANGO_SECRET_KEY
+      - key: KKIAPAY_SANDBOX
+        fromService:
+          type: web
+          name: ecampus-bbt
+          envVarKey: KKIAPAY_SANDBOX
+      - key: KKIAPAY_PUBLIC_KEY
+        fromService:
+          type: web
+          name: ecampus-bbt
+          envVarKey: KKIAPAY_PUBLIC_KEY
+      - key: KKIAPAY_PRIVATE_KEY
+        fromService:
+          type: web
+          name: ecampus-bbt
+          envVarKey: KKIAPAY_PRIVATE_KEY
+      - key: KKIAPAY_SECRET_KEY
+        fromService:
+          type: web
+          name: ecampus-bbt
+          envVarKey: KKIAPAY_SECRET_KEY
+      - key: FLUTTERWAVE_SECRET_KEY
+        fromService:
+          type: web
+          name: ecampus-bbt
+          envVarKey: FLUTTERWAVE_SECRET_KEY

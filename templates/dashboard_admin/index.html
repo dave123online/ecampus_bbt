@@ -1,0 +1,117 @@
+{% extends "dashboard_admin/base_admin.html" %}
+{% block content %}
+<div class="admin-page-header">
+  <h1>Tableau de bord</h1>
+  <p>Vue d'ensemble de la plateforme eCampus BBT.</p>
+</div>
+
+<div class="admin-stats-grid">
+  <div class="admin-stat-card">
+    <div class="admin-stat-icon"><i class="fa-solid fa-users"></i></div>
+    <div>
+      <span class="admin-stat-value">{{ total_students }}</span>
+      <span class="admin-stat-label">Étudiants inscrits</span>
+    </div>
+  </div>
+
+  <div class="admin-stat-card">
+    <div class="admin-stat-icon admin-stat-icon-success"><i class="fa-solid fa-user-check"></i></div>
+    <div>
+      <span class="admin-stat-value">{{ active_students }}</span>
+      <span class="admin-stat-label">Comptes actifs</span>
+    </div>
+  </div>
+
+  <div class="admin-stat-card">
+    <div class="admin-stat-icon admin-stat-icon-gold"><i class="fa-solid fa-coins"></i></div>
+    <div>
+      <span class="admin-stat-value">{{ monthly_revenue|floatformat:0 }} XOF</span>
+      <span class="admin-stat-label">Revenus {{ month_name }}</span>
+    </div>
+  </div>
+
+  <div class="admin-stat-card">
+    <div class="admin-stat-icon"><i class="fa-solid fa-credit-card"></i></div>
+    <div>
+      <span class="admin-stat-value">{{ monthly_payments }}</span>
+      <span class="admin-stat-label">Paiements ce mois</span>
+    </div>
+  </div>
+
+  <div class="admin-stat-card">
+    <div class="admin-stat-icon admin-stat-icon-success"><i class="fa-solid fa-graduation-cap"></i></div>
+    <div>
+      <span class="admin-stat-value">{{ recent_completions }}</span>
+      <span class="admin-stat-label">Notions validées (7 j)</span>
+    </div>
+  </div>
+</div>
+
+<div class="admin-grid-2">
+  <div class="admin-card">
+    <div class="admin-card-header">
+      <h2><i class="fa-solid fa-clock-rotate-left"></i> Derniers paiements</h2>
+      <a href="{% url 'dashboard_admin:payments' %}" class="admin-link">Voir tout →</a>
+    </div>
+    <div class="admin-list">
+      {% for payment in recent_payments %}
+        <div class="admin-list-item">
+          <div>
+            <strong>{{ payment.enrollment.student.first_name|default:payment.enrollment.student.username }}</strong>
+            <small>{{ payment.enrollment.plan.name }}</small>
+          </div>
+          <div class="admin-list-right">
+            <strong>{{ payment.amount }} {{ payment.currency }}</strong>
+            <small>{{ payment.verified_at|date:"d/m H:i" }}</small>
+          </div>
+        </div>
+      {% empty %}
+        <p class="admin-empty">Aucun paiement enregistré.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="admin-card">
+    <div class="admin-card-header">
+      <h2><i class="fa-solid fa-user-plus"></i> Derniers inscrits</h2>
+      <a href="{% url 'dashboard_admin:students' %}" class="admin-link">Voir tout →</a>
+    </div>
+    <div class="admin-list">
+      {% for student in recent_students %}
+        <a href="{% url 'dashboard_admin:student_detail' student.pk %}" class="admin-list-item">
+          <div>
+            <strong>{{ student.first_name|default:student.username }}</strong>
+            <small>{{ student.email }} — Niveau {{ student.level|default:"—" }}</small>
+          </div>
+          <div class="admin-list-right">
+            <small>{{ student.date_joined|date:"d/m" }}</small>
+            {% if student.enrollment %}
+              <span class="admin-badge admin-badge-paid">Payant</span>
+            {% else %}
+              <span class="admin-badge admin-badge-admin">Admin</span>
+            {% endif %}
+          </div>
+        </a>
+      {% empty %}
+        <p class="admin-empty">Aucun étudiant.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="admin-card">
+  <div class="admin-card-header">
+    <h2><i class="fa-solid fa-layer-group"></i> Répartition par niveau</h2>
+  </div>
+  <div class="admin-level-grid">
+    {% for item in students_by_level %}
+      <div class="admin-level-item">
+        <span class="admin-level-name">{{ item.level }}</span>
+        <span class="admin-level-count">{{ item.count }}</span>
+      </div>
+    {% empty %}
+      <p class="admin-empty">Aucun étudiant avec un niveau assigné.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

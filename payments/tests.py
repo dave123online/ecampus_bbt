@@ -84,7 +84,22 @@ class PaidRatioUnlockTests(TestCase):
         self.assertEqual(paid_notions_available_for(self.student), 3)
         # Window opened on first 3 notions
         self.assertEqual(
-            StudentProgress.objects.filter(student=self.student, status="in_progress").count(), 3)
+            StudentProgress.objects.filter(student=self.student, status="in_progress").count(),
+            1,
+        )
+
+        self.assertTrue(
+            StudentProgress.objects.filter(
+                student=self.student,
+                notion__order=1,
+                status="in_progress",
+            ).exists()
+        )
+
+        self.assertEqual(
+            StudentProgress.objects.filter(student=self.student, status="locked").count(),
+            2,
+        )
         self.assertTrue(self.student.is_active)  # activated by first payment
 
     def test_full_payment_unlocks_all_and_marks_paid(self):
@@ -126,10 +141,9 @@ class WebhookSecurityTests(TestCase):
         self.client.session.save()
 
     @patch("payments.providers.kkiapay_initiate_payment",
-           return_value=("https://app.kkiapay.me/api/tpayment", {"apikey": "k"}))
+       return_value="https://app.kkiapay.me/payment/abc123")  # URL directe, pas un tuple
     def test_checkout_amount_not_taken_from_post(self, minit):
         """POSTing a fake amount must not change what we bill.
-
         Use an authenticated student: the one-shot signup session marker is
         consumed by the first checkout POST, so a Client-based second POST
         would be rejected for ownership reasons, not billing ones.
@@ -140,9 +154,16 @@ class WebhookSecurityTests(TestCase):
         resp = self.client.post(
             reverse("payments:checkout", args=[self.enrollment.pk]),
             {"provider": "kkiapay", "amount": "1"})
-        self.assertEqual(resp.status_code, 200)  # kkiapay redirect form page
+    
+        # Redirection vers l'URL KkiaPay
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("app.kkiapay.me", resp.url)
+    
+        # Vérifier que le montant n'a pas été modifié par le POST
         p = Payment.objects.filter(enrollment=self.enrollment).first()
         self.assertNotEqual(p.amount, Decimal("1"))
+        # Le montant devrait être celui calculé par next_tranche_state
+        self.assertEqual(p.amount, Decimal("10200"))
 
     def test_flutterwave_webhook_rejects_missing_hash(self):
         resp = self.client.post(reverse("payments:flutterwave_webhook"),

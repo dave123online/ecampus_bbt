@@ -2,42 +2,59 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
 from courses.models import Notion
+
 from .models import StudentProgress
 
 
 @login_required
 def dashboard(request):
     user = request.user
-    notions = Notion.objects.filter(level=user.level)
+    notions = Notion.objects.filter(level=user.level).order_by("order")
+
     progress_by_notion = {
-        p.notion_id: p for p in StudentProgress.objects.filter(student=user, notion__in=notions)
+        p.notion_id: p
+        for p in StudentProgress.objects.filter(student=user, notion__in=notions)
     }
 
+    enrollment = getattr(user, "enrollment", None)
+    paid_available = enrollment.paid_notion_count() if enrollment is not None else None
+
     rows = []
+    previous_status = None
+
     for notion in notions:
         progress = progress_by_notion.get(notion.id)
-        if progress:
+
+        # 1) Paid window check
+        if paid_available is not None and notion.order > paid_available:
+            status = "locked"
+        elif progress:
             status = progress.status
         else:
-            # No StudentProgress row yet: matches courses.permissions.NotionAccessMixin,
-            # which treats the first notion of a level as implicitly unlocked.
             status = "in_progress" if notion.is_first_in_level() else "locked"
+
+        # 2) Sequential check for dashboard consistency
+        if not notion.is_first_in_level():
+            if previous_status != "completed":
+                status = "locked"
+
         rows.append({
             "notion": notion,
             "status": status,
             "best_score": progress.best_score if progress else None,
         })
 
+        previous_status = status
+
     completed_count = sum(1 for r in rows if r["status"] == "completed")
     percent_complete = round((completed_count / len(rows)) * 100) if rows else 0
 
-    # Payment schedule for self-registered (paid) students — shows what is
-    # paid vs owed and offers a one-click retry for the next tranche.
-    enrollment = getattr(user, "enrollment", None)
     payment_ctx = None
     if enrollment is not None:
         from payments.providers import next_tranche_state
+
         tranche_index, amount = next_tranche_state(enrollment)
+
         payment_ctx = {
             "enrollment": enrollment,
             "tranche_index": tranche_index,

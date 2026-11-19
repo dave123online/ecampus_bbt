@@ -1,0 +1,69 @@
+{% extends "dashboard_admin/base_admin.html" %}
+{% block content %}
+<div class="admin-page-header">
+  <h1>Ajouter un étudiant</h1>
+  <p>Création d'un étudiant en présentiel. L'accès sera immédiat, sans paiement requis.</p>
+</div>
+
+<div class="admin-card admin-form-card">
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    <div class="admin-form-grid">
+      <div class="admin-form-field">
+        <label for="{{ form.first_name.id_for_label }}">Prénom *</label>
+        {{ form.first_name }}
+        {{ form.first_name.errors }}
+      </div>
+      <div class="admin-form-field">
+        <label for="{{ form.last_name.id_for_label }}">Nom</label>
+        {{ form.last_name }}
+        {{ form.last_name.errors }}
+      </div>
+    </div>
+
+    <div class="admin-form-field">
+      <label for="{{ form.email.id_for_label }}">E-mail *</label>
+      {{ form.email }}
+      {{ form.email.errors }}
+    </div>
+
+    <div class="admin-form-grid">
+      <div class="admin-form-field">
+        <label for="{{ form.phone_number.id_for_label }}">Téléphone</label>
+        {{ form.phone_number }}
+        {{ form.phone_number.errors }}
+      </div>
+      <div class="admin-form-field">
+        <label for="{{ form.level.id_for_label }}">Niveau *</label>
+        {{ form.level }}
+        {{ form.level.errors }}
+      </div>
+    </div>
+
+    <div class="admin-form-field">
+      <label for="{{ form.password.id_for_label }}">Mot de passe provisoire *</label>
+      {{ form.password }}
+      {{ form.password.errors }}
+      {% if form.password.help_text %}
+        <small class="admin-help">{{ form.password.help_text }}</small>
+      {% endif %}
+    </div>
+
+    {% if form.non_field_errors %}
+      <div class="admin-form-errors">
+        {% for error in form.non_field_errors %}
+          <p>{{ error }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="admin-form-actions">
+      <a href="{% url 'dashboard_admin:students' %}" class="btn btn-secondary">Annuler</a>
+      <button type="submit" class="btn btn-primary">
+        <i class="fa-solid fa-user-plus"></i> Créer l'étudiant
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

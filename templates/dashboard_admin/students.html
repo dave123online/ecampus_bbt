@@ -1,0 +1,81 @@
+{% extends "dashboard_admin/base_admin.html" %}
+{% block content %}
+<div class="admin-page-header">
+  <h1>Étudiants <span class="admin-count">{{ total_count }}</span></h1>
+  <a href="{% url 'dashboard_admin:student_create' %}" class="btn btn-primary">
+    <i class="fa-solid fa-user-plus"></i> Ajouter un étudiant
+  </a>
+</div>
+
+<div class="admin-filters">
+  <form method="get" class="admin-filter-form">
+    <div class="admin-filter-group">
+      <label>Type :</label>
+      <select name="type" onchange="this.form.submit()">
+        <option value="all" {% if filter_type == 'all' %}selected{% endif %}>Tous</option>
+        <option value="paid" {% if filter_type == 'paid' %}selected{% endif %}>Auto-inscrits (payants)</option>
+        <option value="admin" {% if filter_type == 'admin' %}selected{% endif %}>Créés par l'admin</option>
+      </select>
+    </div>
+    <div class="admin-filter-group">
+      <input type="text" name="q" value="{{ search }}" placeholder="Rechercher (nom, email)…">
+      <button type="submit" class="btn btn-primary"><i class="fa-solid fa-search"></i></button>
+    </div>
+  </form>
+</div>
+
+<div class="admin-table-wrapper">
+  <table class="admin-table">
+    <thead>
+      <tr>
+        <th>Nom</th>
+        <th>Email</th>
+        <th>Niveau</th>
+        <th>Formule</th>
+        <th>Statut</th>
+        <th>Inscrit le</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for student in students %}
+      <tr>
+        <td><strong>{{ student.first_name|default:"—" }} {{ student.last_name|default:"" }}</strong></td>
+        <td>{{ student.email }}</td>
+        <td>{{ student.level|default:"—" }}</td>
+        <td>
+          {% if student.enrollment %}
+            {{ student.enrollment.plan.name }}
+          {% else %}
+            <span class="admin-badge admin-badge-admin">Admin</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if student.enrollment %}
+            {% if student.enrollment.status == "paid" %}
+              <span class="admin-badge admin-badge-paid">Payé</span>
+            {% elif student.enrollment.status == "partially_paid" %}
+              <span class="admin-badge admin-badge-partial">Partiel</span>
+            {% else %}
+              <span class="admin-badge admin-badge-pending">En attente</span>
+            {% endif %}
+          {% else %}
+            <span class="admin-badge admin-badge-active">Actif</span>
+          {% endif %}
+        </td>
+        <td>{{ student.date_joined|date:"d/m/Y" }}</td>
+        <td>
+          <a href="{% url 'dashboard_admin:student_detail' student.pk %}" class="admin-link-small">
+            Voir <i class="fa-solid fa-arrow-right"></i>
+          </a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="7" class="admin-empty">Aucun étudiant trouvé.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

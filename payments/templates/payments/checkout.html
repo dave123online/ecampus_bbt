@@ -2,37 +2,67 @@
 {% block title %}Paiement — eCampus BBT{% endblock %}
 {% block content %}
 <div class="auth-card">
-  <h1>Paiement — {{ enrollment.plan.name }}</h1>
+<h1>Paiement — {{ enrollment.plan.name }}</h1>
 
-  {% if already_paid %}
-    <p class="success">✅ Votre accès est entièrement payé. <a href="{% url 'progress:dashboard' %}">Accéder à mes notions</a>.</p>
-  {% else %}
-    <ul class="muted">
-      <li>Formule : {{ enrollment.plan.notion_count }} notion(s) du niveau {{ enrollment.student.level }}</li>
-      <li>Prix total : {{ enrollment.plan.price }} {{ enrollment.plan.currency }}</li>
-      <li>Déjà payé : {{ enrollment.total_paid }} {{ enrollment.plan.currency }}</li>
-      {% if tranche_index %}
-      <li>Tranche {{ tranche_index }}/{{ tranches_total }} à régler : <strong>{{ amount }} {{ enrollment.plan.currency }}</strong></li>
-      {% endif %}
-    </ul>
+{% if already_paid %}
+<p class="success">✅ Votre accès est entièrement payé. <a href="{% url 'progress:dashboard' %}">Accéder à mes notions</a>.</p>
+{% else %}
 
-    {% if error %}<p class="error">{{ error }}</p>{% endif %}
-
-    {% if tranche_index %}
-    <form method="post">
-      {% csrf_token %}
-      <div class="payment-methods">
-        <button type="submit" name="provider" value="kkiapay" class="btn btn-primary">
-          📱 Payer avec Mobile Money (KkiaPay)
-        </button>
-        <button type="submit" name="provider" value="flutterwave" class="btn btn-secondary">
-          💳 Payer par carte (Flutterwave)
-        </button>
-      </div>
-    </form>
-    {% else %}
-    <p class="warning">Toutes vos tranches ont été engagées. Contactez-nous si le solde affiché semble incorrect.</p>
-    {% endif %}
+<ul class="muted">
+  <li>Formule : {{ enrollment.plan.notion_count }} notion(s) du niveau {{ enrollment.student.level }}</li>
+  <li>Prix total : {{ enrollment.plan.price }} {{ enrollment.plan.currency }}</li>
+  <li>Déjà payé : {{ enrollment.total_paid }} {{ enrollment.plan.currency }}</li>
+  {% if tranche_index %}
+  <li>Tranche {{ tranche_index }}/{{ tranches_total }} à régler : <strong>{{ amount }} {{ enrollment.plan.currency }}</strong></li>
   {% endif %}
+</ul>
+
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+{% if tranche_index %}
+<form method="post">
+  {% csrf_token %}
+
+  {% if can_pay_full %}
+  <div class="pay-full-box" style="margin-bottom: 20px; padding: 16px; border: 2px solid var(--primary); border-radius: 12px; background: var(--primary-light);">
+    <strong style="display:block; margin-bottom: 8px;">💡 Option : Payer en une fois</strong>
+    <p style="font-size: .9rem; margin: 0 0 12px; color: var(--text-light);">
+      Réglez la totalité ({{ full_price }} {{ enrollment.plan.currency }}) et débloquez toutes vos notions d'un coup.
+    </p>
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <button type="submit" name="provider" value="full"
+              onclick="document.getElementById('id_full_provider').value='kkiapay'"
+              class="btn btn-primary" style="justify-content:center;">
+        📱 Tout payer — Mobile Money
+      </button>
+      <button type="submit" name="provider" value="full"
+              onclick="document.getElementById('id_full_provider').value='flutterwave'"
+              class="btn btn-secondary" style="justify-content:center;">
+        💳 Tout payer — Carte bancaire
+      </button>
+    </div>
+    <input type="hidden" name="full_provider" id="id_full_provider" value="kkiapay">
+  </div>
+
+  <hr style="border: none; border-top: 1px solid var(--border); margin: 24px 0;">
+  <p style="font-weight: 700; margin-bottom: 12px;">
+    Ou payer en {{ tranches_total }} tranches
+  </p>
+  {% endif %}
+
+  <div class="payment-methods">
+    <button type="submit" name="provider" value="kkiapay" class="btn btn-primary">
+      📱 Payer {{ amount }} {{ enrollment.plan.currency }} avec Mobile Money (KkiaPay)
+    </button>
+    <button type="submit" name="provider" value="flutterwave" class="btn btn-secondary">
+      💳 Payer {{ amount }} {{ enrollment.plan.currency }} par carte (Flutterwave)
+    </button>
+  </div>
+</form>
+{% else %}
+<p class="warning">Toutes vos tranches ont été engagées. Contactez-nous si le solde affiché semble incorrect.</p>
+{% endif %}
+
+{% endif %}
 </div>
 {% endblock %}

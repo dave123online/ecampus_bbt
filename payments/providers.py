@@ -1,29 +1,10 @@
 """
 Provider adapters for self-service payments.
-
-Security model — defense in depth:
-1. The client NEVER chooses the amount. Amounts are computed server-side
-   from the Enrollment (tranche 1 = ceil(ratio × price), final tranche =
-   exact remainder).
-2. A payment is only marked `success` after a SERVER-SIDE verification
-   against the provider's API (verify endpoint) — and, for Flutterwave,
-   additionally via an HMAC-signed webhook. A redirect to our callback URL
-   alone never grants access.
-3. Webhooks are deduplicated by provider_ref and validated with a constant
-   -time HMAC comparison.
-
-NOTE ON KKIAPAY: KkiaPay's public integration posts an inline payment form
-(fields: apikey, amount, customer_phone, data_return=url de confirmation, …)
-to https://app.kkiapay.me/api/tpayment. Exact field names / signature scheme
-may vary with your merchant account version — check their official doc and
-adjust `_kkiapay_form_fields()` and `verify_kkiapay_payment()` below. All
-other logic (amounts, tranches, unlocking) is provider-independent.
 """
-
 import hmac
 import logging
-from decimal import Decimal
-
+import re
+from decimal import Decimal, InvalidOperation
 import requests
 from django.conf import settings
 from django.urls import reverse
@@ -36,12 +17,6 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 def compute_tranche_amounts(enrollment):
-    """Return a list of Decimal amounts, one per tranche allowed by the plan.
-
-    Tranche 1 pays FIRST_TRANCHE_RATIO (~1/3) so the student gets ~1/3 of
-    the notions; remaining tranches split the rest evenly; the LAST tranche
-    always equals the exact remainder so the sum == plan.price.
-    """
     price = enrollment.plan.price
     n = max(1, enrollment.plan.max_installments)
     if n == 1:
@@ -50,7 +25,7 @@ def compute_tranche_amounts(enrollment):
     rest = price - first
     per_rest = (rest / (n - 1)).quantize(Decimal("0.01"), rounding="ROUND_DOWN")
     tranches = [first] + [per_rest] * (n - 2)
-    tranches.append(price - sum(tranches))  # exact remainder
+    tranches.append(price - sum(tranches))
     return tranches
 
 
@@ -66,73 +41,147 @@ def next_tranche_state(enrollment):
 
 
 # ---------------------------------------------------------------------------
-# Flutterwave (international cards — incl. prepaid — + mobile money Africa)
+# Flutterwave helpers
 # ---------------------------------------------------------------------------
 
-def flutterwave_initiate_payment(payment, email, name, phone):
-    """Create a transaction via the standard FLW API v3. Returns redirect URL.
+def _flutterwave_headers():
+    return {
+        "Authorization": f"Bearer {settings.FLUTTERWAVE_SECRET_KEY}",
+    }
 
-    txRef embeds the secret verification_token so the callback can be
-    matched AND verified server-side afterwards.
-    """
+
+def _payment_from_flw_tx_ref(tx_ref):
+    if not tx_ref:
+        return None
+    parts = tx_ref.split("-", 2)
+    if len(parts) != 3 or parts[0] != "flw":
+        return None
+    try:
+        payment_id = int(parts[1])
+    except (TypeError, ValueError):
+        return None
+    token = parts[2]
+    from .models import Payment
+    return (
+        Payment.objects
+        .filter(id=payment_id, verification_token=token)
+        .select_related("enrollment__plan")
+        .first()
+    )
+
+
+def _flw_get(path, params=None):
+    try:
+        resp = requests.get(
+            settings.FLUTTERWAVE_BASE_URL + path,
+            headers=_flutterwave_headers(),
+            params=params,
+            timeout=15,
+        )
+        return resp.status_code, resp.json()
+    except (requests.RequestException, ValueError):
+        logger.exception("Flutterwave API call failed: %s", path)
+        return None, {}
+
+
+def _flw_data_matches(data, payment, tx_ref):
+    if not isinstance(data, dict):
+        return False
+    if data.get("tx_ref") != tx_ref:
+        return False
+    if data.get("status") != "successful":
+        return False
+    amount_raw = data.get("charged_amount", data.get("amount"))
+    if amount_raw is None:
+        return False
+    try:
+        amount = Decimal(str(amount_raw))
+    except (InvalidOperation, ValueError):
+        return False
+    if amount != payment.amount:
+        return False
+    currency = data.get("currency")
+    if currency and currency != payment.currency:
+        return False
+    return True
+
+
+def flutterwave_initiate_payment(payment, email, name, phone):
     base = settings.PLATFORM_BASE_URL.rstrip("/")
     payload = {
         "tx_ref": f"flw-{payment.id}-{payment.verification_token}",
         "amount": str(payment.amount),
         "currency": payment.currency,
         "redirect_url": base + reverse("payments:flutterwave_callback", args=[payment.id]),
-        "customer": {"email": email, "name": name, "phonenumber": phone},
-        "customizations": {"title": "eCampus BBT", "description": "Accès plateforme"},
-        "meta": {"payment_id": payment.id},
+        "customer": {
+            "email": email,
+            "name": name,
+            "phonenumber": phone,
+        },
+        "customizations": {
+            "title": "eCampus BBT",
+            "description": "Accès plateforme",
+        },
+        "meta": {
+            "payment_id": payment.id,
+        },
     }
-    resp = requests.post(
-        settings.FLUTTERWAVE_BASE_URL + "/transactions/initiate",
-        json=payload,
-        headers={"Authorization": f"Bearer {settings.FLUTTERWAVE_SECRET_KEY}"},
-        timeout=15,
-    )
-    data = resp.json()
-    if resp.status_code != 200 or data.get("status") != "success":
+    try:
+        resp = requests.post(
+            settings.FLUTTERWAVE_BASE_URL + "/payments",
+            json=payload,
+            headers=_flutterwave_headers(),
+            timeout=15,
+        )
+        data = resp.json()
+    except (requests.RequestException, ValueError) as exc:
+        logger.exception("Flutterwave initiate failed")
+        raise RuntimeError("Le prestataire de paiement est momentanément indisponible.") from exc
+
+    if resp.status_code not in (200, 201) or data.get("status") != "success":
         logger.error("Flutterwave initiate failed: %s %s", resp.status_code, data)
         raise RuntimeError("Le prestataire de paiement est momentanément indisponible.")
-    return data["data"]["link"]
+
+    link = (data.get("data") or {}).get("link")
+    if not link:
+        logger.error("Flutterwave initiate response has no payment link: %s", data)
+        raise RuntimeError("Le prestataire de paiement est momentanément indisponible.")
+    return link
 
 
-def flutterwave_verify(tx_ref):
-    """Server-side verification of a completed transaction.
-
-    Fetches the transaction by ID and checks: status successful,
-    amount matches, tx_ref carries OUR secret token. This is what makes
-    a forged redirect useless.
-    """
-    try:
-        flw_id = tx_ref.split("-")[1]
-        token = tx_ref.split("-", 2)[2]
-    except IndexError:
-        return None
-    from .models import Payment
-
-    payment = Payment.objects.filter(id=flw_id, verification_token=token).first()
+def flutterwave_verify(tx_ref, transaction_id=None):
+    payment = _payment_from_flw_tx_ref(tx_ref)
     if payment is None:
         return None
-    resp = requests.get(
-        f"{settings.FLUTTERWAVE_BASE_URL}/transactions/{flw_id}/verify",
-        headers={"Authorization": f"Bearer {settings.FLUTTERWAVE_SECRET_KEY}"},
-        timeout=15,
-    )
-    data = resp.json().get("data") or {}
-    if (
-        data.get("status") == "successful"
-        and Decimal(str(data.get("charged_amount", 0))) == payment.amount
-        and data.get("tx_ref") == tx_ref
-    ):
-        return payment
+
+    if transaction_id:
+        status_code, body = _flw_get(f"/transactions/{transaction_id}/verify")
+        data = (body or {}).get("data") or {}
+        if status_code == 200 and _flw_data_matches(data, payment, tx_ref):
+            return payment
+
+    status_code, body = _flw_get("/transactions", params={"tx_ref": tx_ref})
+    rows = (body or {}).get("data") or []
+    if isinstance(rows, dict):
+        rows = rows.get("transactions") or rows.get("results") or []
+    if isinstance(rows, list):
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            if row.get("tx_ref") != tx_ref:
+                continue
+            flw_id = row.get("id")
+            if flw_id:
+                verify_status, verify_body = _flw_get(f"/transactions/{flw_id}/verify")
+                verify_data = (verify_body or {}).get("data") or {}
+                if verify_status == 200 and _flw_data_matches(verify_data, payment, tx_ref):
+                    return payment
+            if _flw_data_matches(row, payment, tx_ref):
+                return payment
     return None
 
 
 def flutterwave_webhook_is_authentic(request) -> bool:
-    """Flutterwave sends a static `verif-hash` header configured in the
-    dashboard. Constant-time comparison; empty secret => reject everything."""
     given = request.headers.get("verif-hash", "")
     expected = getattr(settings, "FLUTTERWAVE_SECRET_HASH", "")
     if not expected or not given:
@@ -141,81 +190,147 @@ def flutterwave_webhook_is_authentic(request) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# KkiaPay (Mobile Money — Bénin / UEMOA)
+# KkiaPay
 # ---------------------------------------------------------------------------
+# Flux officiel (docs.kkiapay.me) :
+#   1. le navigateur ouvre le widget JS (clé publique) -> le client paie ;
+#   2. KkiaPay renvoie un transactionId ;
+#   3. le SERVEUR vérifie la transaction : POST {base}/api/v1/transactions/status
+#      (en-têtes X-API-KEY / X-PRIVATE-KEY / X-SECRET-KEY, champ transactionId)
+#      -> {"status": "SUCCESS", "amount": 100, "transactionId": "...", ...}
+# Le webhook (dashboard) ne sert que de notification : on re-vérifie toujours via l'API.
 
-def kkiapay_initiate_payment(payment, phone):
-    """Return (post_url, fields) for the auto-submitted inline payment form.
+_HEX32 = re.compile(r"^[0-9a-f]{32}$")
 
-    The customer is redirected to KkiaPay's hosted page; after payment it
-    POSTs back to `data_return` with a confirmation id (`data`).
-    """
+
+def kkiapay_widget_config(payment, student) -> dict:
+    """Paramètres du widget JS KkiaPay pour ce paiement (rendus côté navigateur)."""
     base = settings.PLATFORM_BASE_URL.rstrip("/")
-    fields = _kkiapay_form_fields(payment, phone, base)
-    return "https://app.kkiapay.me/api/tpayment", fields
-
-
-def _kkiapay_form_fields(payment, phone, base):
-    """ADAPT to your KkiaPay merchant doc — canonical inline-form fields."""
-    return {
-        "apikey": settings.KKIAPAY_PUBLIC_KEY,
-        "amount": str(int(payment.amount)),          # XOF, no decimals
-        "phone_number": phone,
-        "callback": base + reverse("payments:kkiapay_webhook", args=[payment.id]),
-        "data_return": base + reverse("payments:kkiapay_callback", args=[payment.id]),
-        "data": payment.verification_token,           # echoed back on return
-        "object": f"eCampus BBT — tranche {payment.tranche_index}",
+    cfg = {
+        "key": settings.KKIAPAY_PUBLIC_KEY,
+        "amount": int(payment.amount),          # XOF, sans décimales
+        "sandbox": bool(settings.KKIAPAY_SANDBOX),
+        "callback": base + reverse("payments:kkiapay_callback", args=[payment.id]),
+        # partnerId / data : identifiant interne, renvoyé par KkiaPay -> sert à rattacher
+        # la transaction à CE paiement (anti-rejeu).
+        "partnerId": payment.verification_token,
+        "data": payment.verification_token,
+        "name": student.first_name or student.username,
+        "email": student.email or "",
+        "phone": (student.phone_number or "").replace(" ", "").replace("-", "").lstrip("+"),
+        "paymentmethod": "momo",
+        "theme": "#0f766e",
     }
+    return cfg
 
 
-def verify_kkiapay_payment(payment, confirmation_id) -> bool:
-    """Server-side check of a KkiaPay transaction by its confirmation id.
-
-    Endpoint/params follow KkiaPay's transactions API (GET with
-    `transaction_id` + private key header). ADAPT to current doc.
-    """
-    if not confirmation_id:
-        return False
-    resp = requests.get(
-        f"{settings.KKIAPAY_BASE_URL}/transactions/{confirmation_id}",
-        headers={"privatekey": settings.KKIAPAY_SECRET_KEY},
-        timeout=15,
-    )
+def kkiapay_fetch_transaction(transaction_id):
+    """Interroge l'API KkiaPay. Retourne le dict de la transaction ou None."""
+    if not transaction_id:
+        return None
     try:
-        data = resp.json()
-    except ValueError:
-        return False
-    # Expected shape (to confirm with doc): {"state": true, "amount": ..., ...}
-    confirmed = bool(data.get("state")) and str(data.get("amount")) == str(int(payment.amount))
-    return confirmed
-
-
-def kkiapay_lookup_by_token(payment):
-    """Best-effort recovery of a KkiaPay confirmation id when the browser
-    callback/webhook never delivered one (lost POST).
-
-    Some KkiaPay account versions expose a transaction list filtered by the
-    phone number; we look for a matching amount after initiation. If your
-    account has no such endpoint, this returns "" and the async safety-net
-    command (payments_recheck_pending) handles expiry instead.
-    """
-    if payment.provider_ref:  # already known from a partial webhook
-        return payment.provider_ref
-    try:
-        resp = requests.get(
-            f"{settings.KKIAPAY_BASE_URL}/transactions",
-            headers={"privatekey": settings.KKIAPAY_SECRET_KEY},
-            params={"phone_number": payment.enrollment.student.phone_number},
+        resp = requests.post(
+            f"{settings.KKIAPAY_BASE_URL}/api/v1/transactions/status",
+            data={"transactionId": str(transaction_id)},
+            headers={
+                "Accept": "application/json",
+                "X-API-KEY": settings.KKIAPAY_PUBLIC_KEY,
+                "X-PRIVATE-KEY": settings.KKIAPAY_PRIVATE_KEY,
+                "X-SECRET-KEY": settings.KKIAPAY_SECRET_KEY,
+            },
             timeout=15,
         )
         data = resp.json()
-    except (ValueError, requests.RequestException):
-        return ""
-    rows = data.get("data") or data if isinstance(data, (list, dict)) else []
-    if isinstance(rows, dict):
-        rows = rows.get("transactions", []) or rows.get("results", []) or []
-    target = str(int(payment.amount))
-    for row in rows:
-        if str(row.get("amount")) == target and row.get("id"):
-            return str(row["id"])
-    return ""
+    except (requests.RequestException, ValueError):
+        logger.exception("KkiaPay status failed for transaction=%s", transaction_id)
+        return None
+    if resp.status_code != 200 or not isinstance(data, dict):
+        logger.warning("KkiaPay status HTTP %s for transaction=%s: %s",
+                       resp.status_code, transaction_id, str(data)[:300])
+        return None
+    return data
+
+
+def _kkiapay_returned_refs(data):
+    """Valeurs d'identifiant que KkiaPay a pu renvoyer (partnerId / data / stateData)."""
+    out = []
+    for key in ("partnerId", "data", "stateData"):
+        val = data.get(key)
+        if isinstance(val, dict):
+            out.extend(str(v) for v in val.values())
+        elif val not in (None, ""):
+            out.append(str(val))
+    return out
+
+
+def kkiapay_transaction_status(data) -> str:
+    """'success' | 'failed' | 'pending' à partir de la réponse de l'API."""
+    status = str(data.get("status") or data.get("state") or "").upper()
+    if status in ("SUCCESS", "SUCCESSFUL", "COMPLETED") or data.get("state") is True:
+        return "success"
+    if status in ("FAILED", "FAILURE", "CANCELLED", "CANCELED", "EXPIRED"):
+        return "failed"
+    return "pending"
+
+
+def verify_kkiapay_payment(payment, confirmation_id) -> bool:
+    """Vérification serveur d'une transaction KkiaPay pour CE paiement.
+
+    Garde-fous :
+    - transaction jamais rattachée à un AUTRE paiement (anti-rejeu) ;
+    - statut SUCCESS et montant exact ;
+    - si KkiaPay renvoie un de NOS identifiants (32 hex) il doit être celui de ce paiement.
+    """
+    if not confirmation_id:
+        return False
+    confirmation_id = str(confirmation_id)
+
+    from .models import Payment
+
+    if (
+        Payment.objects
+        .filter(provider="kkiapay", provider_ref=confirmation_id)
+        .exclude(pk=payment.pk)
+        .exists()
+    ):
+        logger.warning(
+            "KkiaPay replay refused: tx=%s already bound to another payment (payment=%s)",
+            confirmation_id, payment.pk,
+        )
+        return False
+
+    data = kkiapay_fetch_transaction(confirmation_id)
+    if data is None:
+        return False
+
+    if kkiapay_transaction_status(data) != "success":
+        return False
+
+    try:
+        amount_ok = Decimal(str(data.get("amount"))) == Decimal(int(payment.amount))
+    except (InvalidOperation, ValueError, TypeError):
+        amount_ok = False
+    if not amount_ok:
+        logger.warning("KkiaPay amount mismatch: tx=%s got=%s expected=%s",
+                       confirmation_id, data.get("amount"), payment.amount)
+        return False
+
+    for ref in _kkiapay_returned_refs(data):
+        if _HEX32.match(ref) and ref != payment.verification_token:
+            logger.warning("KkiaPay token mismatch: tx=%s payment=%s", confirmation_id, payment.pk)
+            return False
+
+    return True
+
+
+def kkiapay_webhook_is_authentic(request) -> bool:
+    """En-tête x-kkiapay-secret == hash secret du dashboard (si configuré).
+
+    Défense en profondeur : le webhook n'est jamais cru sur parole,
+    la transaction est toujours re-vérifiée via l'API.
+    """
+    expected = getattr(settings, "KKIAPAY_WEBHOOK_SECRET", "")
+    if not expected:
+        return True
+    given = request.headers.get("x-kkiapay-secret", "")
+    return bool(given) and hmac.compare_digest(given, expected)

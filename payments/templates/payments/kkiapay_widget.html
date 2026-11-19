@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Paiement Mobile Money — eCampus BBT{% endblock %}
+{% block content %}
+<div class="auth-card" style="max-width:520px;margin:3rem auto;text-align:center;">
+  <h2>Paiement Mobile Money</h2>
+  <p>{{ widget.amount }} {{ enrollment.plan.currency }} — tranche {{ payment.tranche_index }}</p>
+  <p id="kk-status" class="muted">Ouverture du paiement sécurisé KkiaPay…</p>
+  <button type="button" id="kk-open" class="btn btn-primary">Payer maintenant</button>
+  <p style="margin-top:1rem;"><a href="{{ checkout_url }}">← Changer de moyen de paiement</a></p>
+</div>
+
+{{ widget|json_script:"kk-config" }}
+<script src="https://cdn.kkiapay.me/k.js"></script>
+<script>
+(function () {
+  var cfg = JSON.parse(document.getElementById("kk-config").textContent);
+  var statusEl = document.getElementById("kk-status");
+
+  function open() {
+    if (typeof openKkiapayWidget !== "function") {
+      statusEl.textContent = "Le module de paiement n'a pas pu se charger. Vérifiez votre connexion et réessayez.";
+      return;
+    }
+    openKkiapayWidget(cfg);
+  }
+
+  // Le navigateur ne prouve rien : on transmet seulement l'id de transaction au
+  // serveur, qui le re-vérifie auprès de KkiaPay avant de débloquer quoi que ce soit.
+  if (typeof addSuccessListener === "function") {
+    addSuccessListener(function (response) {
+      var id = response && (response.transactionId || response.transaction_id || response.id);
+      statusEl.textContent = "Paiement reçu, vérification en cours…";
+      window.location.href = cfg.callback + "?transaction_id=" + encodeURIComponent(id || "");
+    });
+  }
+
+  document.getElementById("kk-open").addEventListener("click", open);
+  window.addEventListener("load", function () { setTimeout(open, 400); });
+})();
+</script>
+{% endblock %}

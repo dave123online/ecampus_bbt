@@ -1,0 +1,152 @@
+{% extends "dashboard_admin/base_admin.html" %}
+{% block content %}
+<div class="admin-page-header">
+  <div>
+    <a href="{% url 'dashboard_admin:students' %}" class="admin-link-small">
+      <i class="fa-solid fa-arrow-left"></i> Retour aux étudiants
+    </a>
+    <h1>{{ student.first_name }} {{ student.last_name }}</h1>
+    <p>{{ student.email }} — Niveau {{ student.level|default:"—" }}</p>
+  </div>
+</div>
+
+<div class="admin-stats-grid admin-stats-grid-3">
+  <div class="admin-stat-card">
+    <div class="admin-stat-icon"><i class="fa-solid fa-calendar"></i></div>
+    <div>
+      <span class="admin-stat-value">{{ student.date_joined|date:"d/m/Y" }}</span>
+      <span class="admin-stat-label">Inscrit le</span>
+    </div>
+  </div>
+
+  <div class="admin-stat-card">
+    <div class="admin-stat-icon"><i class="fa-solid fa-mobile-screen"></i></div>
+    <div>
+      <span class="admin-stat-value">{{ student.phone_number|default:"—" }}</span>
+      <span class="admin-stat-label">Téléphone</span>
+    </div>
+  </div>
+
+  <div class="admin-stat-card">
+    <div class="admin-stat-icon admin-stat-icon-success"><i class="fa-solid fa-circle-check"></i></div>
+    <div>
+      <span class="admin-stat-value">
+        {% if enrollment %}{{ enrollment.paid_notion_count }}{% else %}∞{% endif %}
+      </span>
+      <span class="admin-stat-label">Notions débloquées</span>
+    </div>
+  </div>
+</div>
+
+{% if enrollment %}
+<div class="admin-card">
+  <div class="admin-card-header">
+    <h2><i class="fa-solid fa-receipt"></i> Formule & paiements</h2>
+  </div>
+  <div class="admin-info-grid">
+    <div>
+      <small>Formule</small>
+      <strong>{{ enrollment.plan.name }}</strong>
+    </div>
+    <div>
+      <small>Payé</small>
+      <strong>{{ enrollment.total_paid }} / {{ enrollment.plan.price }} {{ enrollment.plan.currency }}</strong>
+    </div>
+    <div>
+      <small>Statut</small>
+      <strong>{{ enrollment.get_status_display }}</strong>
+    </div>
+  </div>
+
+  {% if payments %}
+  <table class="admin-table admin-table-compact">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Tranche</th>
+        <th>Montant</th>
+        <th>Mode</th>
+        <th>Statut</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in payments %}
+      <tr>
+        <td>{{ p.created_at|date:"d/m/Y H:i" }}</td>
+        <td>{{ p.tranche_index }}</td>
+        <td>{{ p.amount }} {{ p.currency }}</td>
+        <td>{{ p.provider }}</td>
+        <td>
+          {% if p.status == "success" %}
+            <span class="admin-badge admin-badge-paid">Confirmé</span>
+          {% elif p.status == "initiated" %}
+            <span class="admin-badge admin-badge-pending">En attente</span>
+          {% else %}
+            <span class="admin-badge admin-badge-failed">Échoué</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="admin-card">
+  <div class="admin-card-header">
+    <h2><i class="fa-solid fa-layer-group"></i> Progression pédagogique</h2>
+  </div>
+  <div class="admin-notion-grid">
+    {% for row in rows %}
+    <div class="admin-notion-item status-{{ row.status }}">
+      <div class="admin-notion-icon">
+        {% if row.status == "completed" %}<i class="fa-solid fa-circle-check"></i>
+        {% elif row.status == "in_progress" %}<i class="fa-solid fa-book-open"></i>
+        {% else %}<i class="fa-solid fa-lock"></i>{% endif %}
+      </div>
+      <div class="admin-notion-info">
+        <strong>{{ row.notion.order }}. {{ row.notion.title }}</strong>
+        {% if row.best_score %}<small>Meilleur score : {{ row.best_score }}%</small>{% endif %}
+      </div>
+    </div>
+    {% empty %}
+      <p class="admin-empty">Aucune notion définie pour ce niveau.</p>
+    {% endfor %}
+  </div>
+</div>
+
+{% if quiz_attempts %}
+<div class="admin-card">
+  <div class="admin-card-header">
+    <h2><i class="fa-solid fa-square-check"></i> Dernières tentatives de quiz</h2>
+  </div>
+  <table class="admin-table admin-table-compact">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Notion</th>
+        <th>Score</th>
+        <th>Résultat</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in quiz_attempts %}
+      <tr>
+        <td>{{ a.attempted_at|date:"d/m H:i" }}</td>
+        <td>{{ a.quiz.notion.title }}</td>
+        <td>{{ a.score }}%</td>
+        <td>
+          {% if a.passed %}
+            <span class="admin-badge admin-badge-paid">Réussi</span>
+          {% else %}
+            <span class="admin-badge admin-badge-failed">Échoué</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

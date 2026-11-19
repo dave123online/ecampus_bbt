@@ -10,6 +10,7 @@ urlpatterns = [
     path("callback/flutterwave/<int:payment_id>/", views.flutterwave_callback,
          name="flutterwave_callback"),
     path("webhook/flutterwave/", views.flutterwave_webhook, name="flutterwave_webhook"),
+    path("pay/kkiapay/<int:payment_id>/", views.kkiapay_pay, name="kkiapay_pay"),
     path("callback/kkiapay/<int:payment_id>/", views.kkiapay_callback, name="kkiapay_callback"),
     path("webhook/kkiapay/<int:payment_id>/", views.kkiapay_webhook, name="kkiapay_webhook"),
     path("webhook/kkiapay/", views.kkiapay_webhook, name="kkiapay_webhook_generic"),

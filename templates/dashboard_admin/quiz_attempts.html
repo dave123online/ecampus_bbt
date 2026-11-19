@@ -1,0 +1,82 @@
+{% extends "dashboard_admin/base_admin.html" %}
+{% block content %}
+<div class="admin-page-header">
+  <h1>Tentatives de quiz</h1>
+</div>
+
+<div class="admin-stats-grid admin-stats-grid-3">
+  <div class="admin-stat-card">
+    <div class="admin-stat-icon"><i class="fa-solid fa-list"></i></div>
+    <div>
+      <span class="admin-stat-value">{{ total }}</span>
+      <span class="admin-stat-label">Total tentatives</span>
+    </div>
+  </div>
+  <div class="admin-stat-card">
+    <div class="admin-stat-icon admin-stat-icon-success"><i class="fa-solid fa-circle-check"></i></div>
+    <div>
+      <span class="admin-stat-value">{{ passed }}</span>
+      <span class="admin-stat-label">Réussies</span>
+    </div>
+  </div>
+  <div class="admin-stat-card">
+    <div class="admin-stat-icon admin-stat-icon-gold"><i class="fa-solid fa-percent"></i></div>
+    <div>
+      <span class="admin-stat-value">{{ pass_rate }}%</span>
+      <span class="admin-stat-label">Taux de réussite</span>
+    </div>
+  </div>
+</div>
+
+<div class="admin-filters">
+  <form method="get" class="admin-filter-form">
+    <div class="admin-filter-group">
+      <label>Résultat :</label>
+      <select name="passed" onchange="this.form.submit()">
+        <option value="all" {% if passed_filter == 'all' %}selected{% endif %}>Tous</option>
+        <option value="yes" {% if passed_filter == 'yes' %}selected{% endif %}>Réussis</option>
+        <option value="no" {% if passed_filter == 'no' %}selected{% endif %}>Échoués</option>
+      </select>
+    </div>
+  </form>
+</div>
+
+<div class="admin-table-wrapper">
+  <table class="admin-table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Étudiant</th>
+        <th>Notion</th>
+        <th>Score</th>
+        <th>Résultat</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in attempts %}
+      <tr>
+        <td>{{ a.attempted_at|date:"d/m/Y H:i" }}</td>
+        <td>
+          <a href="{% url 'dashboard_admin:student_detail' a.student.pk %}">
+            {{ a.student.first_name|default:a.student.username }}
+          </a>
+        </td>
+        <td>{{ a.quiz.notion.title }}</td>
+        <td><strong>{{ a.score }}%</strong></td>
+        <td>
+          {% if a.passed %}
+            <span class="admin-badge admin-badge-paid">Réussi</span>
+          {% else %}
+            <span class="admin-badge admin-badge-failed">Échoué</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="5" class="admin-empty">Aucune tentative.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
