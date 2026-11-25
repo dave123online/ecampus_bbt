@@ -96,7 +96,11 @@ if _database_url:
     import dj_database_url
 
     DATABASES = {
-        "default": dj_database_url.parse(_database_url, conn_max_age=600),
+        # conn_health_checks : Neon met le compute en veille (scale-to-zero) ; sans ça,
+        # la 1re requête après une pause peut tomber sur une connexion morte.
+        "default": dj_database_url.parse(
+            _database_url, conn_max_age=600, conn_health_checks=True
+        ),
     }
 elif USE_POSTGRES:
     DATABASES = {

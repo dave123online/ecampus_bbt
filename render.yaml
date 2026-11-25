@@ -1,12 +1,8 @@
 # Blueprint Render — eCampus BBT
 # Dashboard Render → New → Blueprint → choisir le dépôt.
 # Les valeurs `sync: false` sont demandées une fois dans le dashboard.
-databases:
-  - name: ecampus-db
-    plan: basic-256mb        # PAS "free" : le Postgres Free expire après 30 jours
-    region: frankfurt
-    databaseName: ecampus
-    user: ecampus
+# Base de données : Neon (externe). Coller l'URL de connexion Neon dans DATABASE_URL.
+# (Pour revenir au Postgres Render : ajouter un bloc `databases:` et utiliser fromDatabase.)
 
 services:
   # ------------------------------------------------------------------ web
@@ -31,10 +27,8 @@ services:
         value: "0"
       - key: DJANGO_SECRET_KEY
         generateValue: true
-      - key: DATABASE_URL
-        fromDatabase:
-          name: ecampus-db
-          property: connectionString
+      - key: DATABASE_URL      # Neon : URL "direct" (sans -pooler), sslmode=require
+        sync: false
       - key: MEDIA_ROOT
         value: /var/data/media
       # Domaine perso (une fois branché) : DJANGO_ALLOWED_HOSTS + PLATFORM_BASE_URL
@@ -89,9 +83,10 @@ services:
       - key: DJANGO_DEBUG
         value: "0"
       - key: DATABASE_URL
-        fromDatabase:
-          name: ecampus-db
-          property: connectionString
+        fromService:
+          type: web
+          name: ecampus-bbt
+          envVarKey: DATABASE_URL
       - key: DJANGO_SECRET_KEY
         fromService:
           type: web
